@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_DIR    = '/home/ec2-user/fileforge-docker-aws'
+        GIT_REPO   = 'https://github.com/askmuhammadtayyab786-max/filefordgewithjenkins.git'
+        GIT_BRANCH = 'main'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo '>>> Pulling latest code from GitHub...'
+                git branch: "${GIT_BRANCH}",
+                    credentialsId: 'github-creds',
+                    url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Copy to App Directory') {
+            steps {
+                echo '>>> Syncing files to app directory...'
+                sh """
+                    sudo mkdir -p ${APP_DIR}
+                    sudo rsync -av --delete \
+                        --exclude='.git' \
+                        --exclude='node_modules' \
+                        \$WORKSPACE/ ${APP_DIR}/
+                    sudo chown -R ec2-user:ec2-user ${APP_DIR}
+                """
+            }
+        }
+
+        stage('Stop Old Containers') {
+            steps {
+                echo '>>> Stopping existing containers...'
+                sh """
+                    cd ${APP_DIR}
+                    docker-compose down --remove-orphans || true
+                """
+            }
+        }
+
+        stage('Remove Old Images') {
+            steps {
+                echo '>>> Removing old frontend and backend images...'
+                sh """
+                    docker rmi frontend || true
+                    docker rmi backend  || true
+                    docker image prune -f || true
+                """
+            }
+        }
+
+        stage('Build Images') {
+            steps {
+                echo '>>> Building frontend and backend images...'
+                sh """
+                    cd ${APP_DIR}
+                    docker-compose build --no-cache
+                """
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo '>>> Starting all services...'
+                sh """
+                    cd ${APP_DIR}
+                    docker-compose up -d
+                """
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo '>>> Waiting for containers to stabilize...'
+                sh 'sleep 15'
+                sh '''
+                    echo "=== Running Containers ==="
+                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+                '''
+                sh '''
+                    echo "=== HTTP Health Check ==="
+                    curl -f --retry 5 --retry-delay 3 http://54.206.97.54 \
+                        && echo "SUCCESS: App is live at http://54.206.97.54" \
+                        || echo "WARNING: App not responding yet"
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo '''
+            ==========================================
+             DEPLOYMENT SUCCESSFUL
+             App live at: http://54.206.97.54
+            ==========================================
+            '''
+        }
+        failure {
+            echo '>>> Build failed — printing container logs for debugging...'
+            sh '''
+                docker logs frontend || true
+                docker logs backend  || true
+                docker logs nginx    || true
+            '''
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
