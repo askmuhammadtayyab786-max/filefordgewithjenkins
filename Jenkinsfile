@@ -18,20 +18,7 @@ pipeline {
             }
         }
 
-        stage('Copy to App Directory') {
-            steps {
-                echo '>>> Syncing files to app directory...'
-                sh """
-                    sudo mkdir -p ${APP_DIR}
-                    sudo rsync -av --delete \
-                        --exclude='.git' \
-                        --exclude='node_modules' \
-                        \$WORKSPACE/ ${APP_DIR}/
-                    sudo chown -R ec2-user:ec2-user ${APP_DIR}
-                """
-            }
-        }
-
+      
         stage('Stop Old Containers') {
             steps {
                 echo '>>> Stopping existing containers...'
