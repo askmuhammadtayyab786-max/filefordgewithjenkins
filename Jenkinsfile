@@ -1,14 +1,10 @@
 pipeline {
     agent any
-
     environment {
-        APP_DIR    = '/home/ec2-user/fileforge-docker-aws'
         GIT_REPO   = 'https://github.com/askmuhammadtayyab786-max/filefordgewithjenkins.git'
         GIT_BRANCH = 'main'
     }
-
     stages {
-
         stage('Checkout') {
             steps {
                 echo '>>> Pulling latest code from GitHub...'
@@ -18,12 +14,11 @@ pipeline {
             }
         }
 
-      
         stage('Stop Old Containers') {
             steps {
                 echo '>>> Stopping existing containers...'
                 sh """
-                    cd ${APP_DIR}
+                    cd ${WORKSPACE}
                     docker-compose down --remove-orphans || true
                 """
             }
@@ -31,7 +26,7 @@ pipeline {
 
         stage('Remove Old Images') {
             steps {
-                echo '>>> Removing old frontend and backend images...'
+                echo '>>> Removing old images...'
                 sh """
                     docker rmi frontend || true
                     docker rmi backend  || true
@@ -42,9 +37,9 @@ pipeline {
 
         stage('Build Images') {
             steps {
-                echo '>>> Building frontend and backend images...'
+                echo '>>> Building images...'
                 sh """
-                    cd ${APP_DIR}
+                    cd ${WORKSPACE}
                     docker-compose build --no-cache
                 """
             }
@@ -54,7 +49,7 @@ pipeline {
             steps {
                 echo '>>> Starting all services...'
                 sh """
-                    cd ${APP_DIR}
+                    cd ${WORKSPACE}
                     docker-compose up -d
                 """
             }
@@ -71,25 +66,18 @@ pipeline {
                 sh '''
                     echo "=== HTTP Health Check ==="
                     curl -f --retry 5 --retry-delay 3 http://3.17.129.133 \
-                        && echo "SUCCESS: App is live at http://3.17.129.133" \
+                        && echo "SUCCESS: App is live!" \
                         || echo "WARNING: App not responding yet"
                 '''
             }
         }
-
     }
 
     post {
         success {
-            echo '''
-            ==========================================
-             DEPLOYMENT SUCCESSFUL
-             App live at: http://3.17.129.133
-            ==========================================
-            '''
+            echo '========== DEPLOYMENT SUCCESSFUL =========='
         }
         failure {
-            echo '>>> Build failed — printing container logs for debugging...'
             sh '''
                 docker logs frontend || true
                 docker logs backend  || true
