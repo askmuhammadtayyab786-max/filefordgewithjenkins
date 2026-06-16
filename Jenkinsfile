@@ -70,8 +70,8 @@ pipeline {
                 '''
                 sh '''
                     echo "=== HTTP Health Check ==="
-                    curl -f --retry 5 --retry-delay 3 http://54.206.97.54 \
-                        && echo "SUCCESS: App is live at http://54.206.97.54" \
+                    curl -f --retry 5 --retry-delay 3 http://3.17.129.133 \
+                        && echo "SUCCESS: App is live at http://3.17.129.133" \
                         || echo "WARNING: App not responding yet"
                 '''
             }
@@ -84,7 +84,7 @@ pipeline {
             echo '''
             ==========================================
              DEPLOYMENT SUCCESSFUL
-             App live at: http://54.206.97.54
+             App live at: http://3.17.129.133
             ==========================================
             '''
         }
