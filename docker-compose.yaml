@@ -22,7 +22,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/fileforge
       - MAX_FILE_SIZE=52428800
       - UPLOAD_DIR=./uploads
-      - ALLOWED_ORIGINS=http://3.17.129.133
+      - ALLOWED_ORIGINS=http://3.129.8.249
     expose:
       - "5000"
     depends_on:
